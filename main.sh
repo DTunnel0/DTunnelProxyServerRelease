@@ -115,9 +115,9 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=$PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response
-StandardOutput=file:$proxy_log_file
-StandardOutput=file:$proxy_log_file
+ExecStart=$PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response --log-file $proxy_log_file
+StandardOutput=null
+StandardOutput=null
 Restart=always
 TasksMax=5000
 
@@ -166,6 +166,24 @@ stop_proxy() {
     pause_prompt
 }
 
+show_proxy_log() {
+    local port proxy_log_file
+    read -rp "$(prompt 'Porta: ')" port
+    proxy_log_file="/var/log/proxy-$port.log"
+
+    if [[ ! -f $proxy_log_file ]]; then
+        echo -e "\033[1;31mArquivo de log nao encrontado\033[0m"
+        pause_prompt
+        return
+    fi
+
+    while :; do
+        clear
+        cat $proxy_log_file
+        sleep 1
+    done
+}
+
 exit_proxy_menu() {
     echo -e "\033[1;31mSaindo...\033[0m"
     exit 0
@@ -173,7 +191,7 @@ exit_proxy_menu() {
 
 main() {
     clear
-    check_token
+    # check_token
 
     echo -e "\033[1;34m╔═════════════════════════════╗\033[0m"
     echo -e "\033[1;34m║\033[1;41m\033[1;32m      DTunnel Proxy Menu     \033[0m\033[1;34m║"
@@ -185,6 +203,7 @@ main() {
     echo -e "\033[1;34m║\033[1;36m[\033[1;32m01\033[1;36m] \033[1;32m• \033[1;31mABRIR PORTA           \033[1;34m║"
     echo -e "\033[1;34m║\033[1;36m[\033[1;32m02\033[1;36m] \033[1;32m• \033[1;31mFECHAR PORTA          \033[1;34m║"
     echo -e "\033[1;34m║\033[1;36m[\033[1;32m03\033[1;36m] \033[1;32m• \033[1;31mREINICIAR PORTA       \033[1;34m║"
+    echo -e "\033[1;34m║\033[1;36m[\033[1;32m04\033[1;36m] \033[1;32m• \033[1;31mMONITOR               \033[1;34m║"
     echo -e "\033[1;34m║\033[1;36m[\033[1;32m00\033[1;36m] \033[1;32m• \033[1;31mSAIR                  \033[1;34m║"
     echo -e "\033[1;34m╚═════════════════════════════╝\033[0m"
     read -rp "$(prompt 'Escolha uma opção: ')" option
@@ -193,6 +212,7 @@ main() {
         1) start_proxy ;;
         2) stop_proxy ;;
         3) restart_proxy ;;
+        4) show_proxy_log ;;
         0) exit_proxy_menu ;;
         *) echo -e "\033[1;31mOpção inválida. Tente novamente.\033[0m" ; pause_prompt ;;
     esac
