@@ -105,7 +105,7 @@ start_proxy() {
 
     service_name="proxy-$port"
     service_file="/etc/systemd/system/$service_name.service"
-    cat > "$service_file" <<EOF
+    cat > $service_file <<EOF
 [Unit]
 Description=DTunnel Proxy Server on port $port
 After=network.target
@@ -114,7 +114,7 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=$PROXY_BIN --token "$(load_token_from_file)" $protocol --port "$port" $ssh_only --buffer-size 512 --workers 2500 $cert_path --response "$response"
+ExecStart=$PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response
 Restart=always
 TasksMax=5000
 
