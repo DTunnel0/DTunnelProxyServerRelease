@@ -50,9 +50,9 @@ show_ports_in_use() {
 }
 
 get_yes_no_response() {
-    local question="$1"
+    local response question="$1" 
     while true; do
-        read -rp "$question (s/n): " response
+        read -rp "$question (s/n): " -ei n response
         case "$response" in
             [sS]) return 0 ;;
             [nN]) return 1 ;;
@@ -84,6 +84,7 @@ get_valid_port() {
 start_proxy() {
     local port=$(get_valid_port)
     local protocol cert_path response ssh_only service_name service_file
+    local proxy_log_file="/var/log/proxy-$port.log"
 
     if get_yes_no_response "$(prompt 'Habilitar o HTTPS?')"; then
         protocol="--https"
@@ -94,7 +95,7 @@ start_proxy() {
         cert_path=""
     fi
 
-    read -rp "$(prompt 'Status HTTP (Padrão: @DuTra01):')" response
+    read -rp "$(prompt 'Status HTTP (Padrão: @DuTra01): ')" response
     response="${response:-@DuTra01}"
 
     if get_yes_no_response "$(prompt 'Habilitar somente SSH?')"; then
@@ -114,7 +115,7 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=$PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response
+ExecStart=bash -c 'exec $PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response &>$proxy_log_file'
 Restart=always
 TasksMax=5000
 
