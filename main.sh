@@ -168,21 +168,29 @@ stop_proxy() {
 
 show_proxy_log() {
     local port proxy_log_file
+
     read -rp "$(prompt 'Porta: ')" port
     proxy_log_file="/var/log/proxy-$port.log"
 
     if [[ ! -f $proxy_log_file ]]; then
-        echo -e "\033[1;31mArquivo de log nao encrontado\033[0m"
+        echo -e "\033[1;31mArquivo de log não encontrado\033[0m"
         pause_prompt
         return
     fi
 
+    trap 'break' INT
+
     while :; do
         clear
-        cat $proxy_log_file
+        cat "$proxy_log_file"
+
+        echo -e "\nPressione \033[1;33mCtrl+C\033[0m para voltar ao menu."
         sleep 1
     done
+
+    trap - INT
 }
+
 
 exit_proxy_menu() {
     echo -e "\033[1;31mSaindo...\033[0m"
@@ -191,7 +199,7 @@ exit_proxy_menu() {
 
 main() {
     clear
-    # check_token
+    check_token
 
     echo -e "\033[1;34m╔═════════════════════════════╗\033[0m"
     echo -e "\033[1;34m║\033[1;41m\033[1;32m      DTunnel Proxy Menu     \033[0m\033[1;34m║"
