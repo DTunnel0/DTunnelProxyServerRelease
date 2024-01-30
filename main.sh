@@ -115,7 +115,9 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=bash -c 'exec $PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response &>$proxy_log_file'
+ExecStart=$PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 512 --workers 2500 $cert_path --response $response
+StandardOutput=file:$proxy_log_file
+StandardOutput=file:$proxy_log_file
 Restart=always
 TasksMax=5000
 
