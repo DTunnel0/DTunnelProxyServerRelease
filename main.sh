@@ -86,7 +86,7 @@ get_valid_port() {
 
 start_proxy() {
     local port=$(get_valid_port)
-    local protocol cert_path response ssh_only service_name service_file domain=""
+    local protocol cert_path response ssh_only service_name service_file
     local proxy_log_file="$LOG_DIR/proxy-$port.log"
 
     if get_yes_no_response "n" "$(prompt 'Habilitar o SSL?')"; then
@@ -95,8 +95,6 @@ start_proxy() {
         if ! get_yes_no_response "s" "$(prompt 'Usar certificado interno?')"; then
             read -rp "$(prompt 'Certificado SSL: ')" cert_path
             cert_path="--cert=$cert_path"
-        else
-            domain="--domain"
         fi
     fi
 
@@ -118,7 +116,7 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=/bin/bash -c '$PROXY_BIN --token=$(load_token_from_file) --port="$port$protocol" $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response=$response $domain --log-file=$proxy_log_file'
+ExecStart=/bin/bash -c '$PROXY_BIN --token=$(load_token_from_file) --port="$port$protocol" $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response=$response --domain --log-file=$proxy_log_file'
 StandardOutput=null
 StandardError=null
 Restart=always
