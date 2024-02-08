@@ -199,7 +199,7 @@ exit_proxy_menu() {
 
 main() {
     clear
-    # check_token
+    check_token
 
     echo -e "\033[1;34m╔═════════════════════════════╗\033[0m"
     echo -e "\033[1;34m║\033[1;41m\033[1;32m      DTunnel Proxy Menu     \033[0m\033[1;34m║"
