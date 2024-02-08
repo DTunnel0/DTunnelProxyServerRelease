@@ -2,22 +2,25 @@
 
 TOKEN_FILE="$HOME/.proxy_token"
 PROXY_BIN="/usr/bin/proxy"
+LOG_DIR="/var/log"
+SERVICE_DIR="/etc/systemd/system"
+DEFAULT_BUFFER_SIZE=32768
+DEFAULT_RESPONSE="@DuTra01"
 
 load_token_from_file() {
-    local token=$(<"$TOKEN_FILE")
-    echo "$token"
+    if [ -f "$TOKEN_FILE" ]; then
+        cat "$TOKEN_FILE"
+    fi
 }
 
 is_port_in_use() {
     local port=$1
     nc -z localhost "$port"
-    return $?
 }
 
 validate_token() {
     local token="$1"
     "$PROXY_BIN" --token "$token" --validate >/dev/null
-    return $?
 }
 
 check_token() {
@@ -50,9 +53,9 @@ show_ports_in_use() {
 }
 
 get_yes_no_response() {
-    local response question="$1" 
+    local response default="$1" question="$2"
     while true; do
-        read -rp "$question (s/n): " -ei n response
+        read -rp "$question (s/n): " -ei "$default" response
         case "$response" in
             [sS]) return 0 ;;
             [nN]) return 1 ;;
@@ -62,14 +65,14 @@ get_yes_no_response() {
 }
 
 pause_prompt() {
-    read -rp "$(prompt 'Enter pra continuar...')" voidResponse
+    read -rp "$(prompt 'Enter para continuar...')" voidResponse
 }
 
 get_valid_port() {
     while true; do
         read -rp "$(prompt 'Porta: ')" port
         if ! [[ "$port" =~ ^[0-9]+$ ]]; then
-            echo -e "\033[1;31mPorta inválido.\033[0m"
+            echo -e "\033[1;31mPorta inválida.\033[0m"
         elif [ "$port" -le 0 ] || [ "$port" -gt 65535 ]; then
             echo -e "\033[1;31mPorta fora do intervalo permitido.\033[0m"
         elif is_port_in_use "$port"; then
@@ -83,30 +86,29 @@ get_valid_port() {
 
 start_proxy() {
     local port=$(get_valid_port)
-    local protocol cert_path response ssh_only service_name service_file
-    local proxy_log_file="/var/log/proxy-$port.log"
+    local protocol cert_path response ssh_only service_name service_file domain=""
+    local proxy_log_file="$LOG_DIR/proxy-$port.log"
 
-    if get_yes_no_response "$(prompt 'Habilitar o HTTPS?')"; then
-        protocol="--https"
-        read -rp "$(prompt 'Certificado SSL (HTTPS):')" cert_path
-        cert_path="--cert $cert_path"
-    else
-        protocol="--http"
+    if get_yes_no_response "n" "$(prompt 'Habilitar o SSL?')"; then
+        protocol=" --ssl"
         cert_path=""
+        if ! get_yes_no_response "s" "$(prompt 'Usar certificado interno?')"; then
+            read -rp "$(prompt 'Certificado SSL: ')" cert_path
+            cert_path="--cert=$cert_path"
+        else
+            domain="--domain"
+        fi
     fi
 
-    read -rp "$(prompt 'Status HTTP (Padrão: @DuTra01): ')" response
-    response="${response:-@DuTra01}"
+    response=$(read -rp "$(prompt 'Status HTTP (Padrão: @DuTra01): ')" response || echo "$DEFAULT_RESPONSE")
 
-    if get_yes_no_response "$(prompt 'Habilitar somente SSH?')"; then
+    if get_yes_no_response "n" "$(prompt 'Habilitar somente SSH?')"; then
         ssh_only="--ssh-only"
-    else
-        ssh_only=""
     fi
 
     service_name="proxy-$port"
-    service_file="/etc/systemd/system/$service_name.service"
-    cat > $service_file <<EOF
+    service_file="$SERVICE_DIR/$service_name.service"
+    cat > "$service_file" <<EOF
 [Unit]
 Description=DTunnel Proxy Server on port $port
 After=network.target
@@ -115,9 +117,9 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=$PROXY_BIN --token $(load_token_from_file) $protocol --port $port $ssh_only --buffer-size 32768 --workers 2500 $cert_path --response $response --log-file $proxy_log_file
+ExecStart=$PROXY_BIN --token=$(load_token_from_file) --port="$port$protocol" $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response="$response" $domain --log-file="$proxy_log_file"
 StandardOutput=null
-StandardOutput=null
+StandardError=null
 Restart=always
 TasksMax=5000
 
@@ -160,7 +162,7 @@ stop_proxy() {
     systemctl stop "$service_name"
     systemctl disable "$service_name"
     systemctl daemon-reload
-    rm "/etc/systemd/system/$service_name.service"
+    rm "$SERVICE_DIR/$service_name.service"
 
     echo -e "\033[1;32mProxy na porta $port foi fechado.\033[0m"
     pause_prompt
@@ -170,7 +172,7 @@ show_proxy_log() {
     local port proxy_log_file
 
     read -rp "$(prompt 'Porta: ')" port
-    proxy_log_file="/var/log/proxy-$port.log"
+    proxy_log_file="$LOG_DIR/proxy-$port.log"
 
     if [[ ! -f $proxy_log_file ]]; then
         echo -e "\033[1;31mArquivo de log não encontrado\033[0m"
@@ -191,7 +193,6 @@ show_proxy_log() {
     trap - INT
 }
 
-
 exit_proxy_menu() {
     echo -e "\033[1;31mSaindo...\033[0m"
     exit 0
@@ -199,7 +200,7 @@ exit_proxy_menu() {
 
 main() {
     clear
-    check_token
+    # check_token
 
     echo -e "\033[1;34m╔═════════════════════════════╗\033[0m"
     echo -e "\033[1;34m║\033[1;41m\033[1;32m      DTunnel Proxy Menu     \033[0m\033[1;34m║"
