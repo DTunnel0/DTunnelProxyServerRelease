@@ -90,7 +90,7 @@ start_proxy() {
     local proxy_log_file="$LOG_DIR/proxy-$port.log"
 
     if get_yes_no_response "n" "$(prompt 'Habilitar o SSL?')"; then
-        protocol=" --ssl"
+        protocol=" ssl"
         cert_path=""
         if ! get_yes_no_response "s" "$(prompt 'Usar certificado interno?')"; then
             read -rp "$(prompt 'Certificado SSL: ')" cert_path
@@ -100,7 +100,8 @@ start_proxy() {
         fi
     fi
 
-    response=$(read -rp "$(prompt 'Status HTTP (Padrão: @DuTra01): ')" response || echo "$DEFAULT_RESPONSE")
+    read -rp "$(prompt 'Status HTTP (Padrão: @DuTra01): ')" response
+    response=${response:-$DEFAULT_RESPONSE}
 
     if get_yes_no_response "n" "$(prompt 'Habilitar somente SSH?')"; then
         ssh_only="--ssh-only"
@@ -117,7 +118,7 @@ After=network.target
 Type=simple
 User=$(whoami)
 WorkingDirectory=$(pwd)
-ExecStart=$PROXY_BIN --token=$(load_token_from_file) --port="$port$protocol" $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response="$response" $domain --log-file="$proxy_log_file"
+ExecStart=/bin/bash -c '$PROXY_BIN --token=$(load_token_from_file) --port="$port$protocol" $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response=$response $domain --log-file=$proxy_log_file'
 StandardOutput=null
 StandardError=null
 Restart=always
