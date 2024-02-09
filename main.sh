@@ -90,7 +90,7 @@ start_proxy() {
     local proxy_log_file="$LOG_DIR/proxy-$port.log"
 
     if get_yes_no_response "n" "$(prompt 'Habilitar o SSL?')"; then
-        protocol=" ssl"
+        protocol=":ssl"
         cert_path=""
         if ! get_yes_no_response "s" "$(prompt 'Usar certificado interno?')"; then
             read -rp "$(prompt 'Certificado SSL: ')" cert_path
@@ -110,17 +110,10 @@ start_proxy() {
     cat > "$service_file" <<EOF
 [Unit]
 Description=DTunnel Proxy Server on port $port
-After=network.target
 
 [Service]
-Type=simple
-User=$(whoami)
-WorkingDirectory=$(pwd)
-ExecStart=/bin/bash -c '$PROXY_BIN --token=$(load_token_from_file) --port="$port$protocol" $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response=$response --domain --log-file=$proxy_log_file'
-StandardOutput=null
-StandardError=null
+ExecStart=$PROXY_BIN --token=$(load_token_from_file) --port=$port$protocol $cert_path $ssh_only --buffer-size=$DEFAULT_BUFFER_SIZE --response=$response --domain --log-file=$proxy_log_file
 Restart=always
-TasksMax=5000
 
 [Install]
 WantedBy=multi-user.target
